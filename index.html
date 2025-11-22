@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Block Blast - Game xếp khối thú vị">
+    <title>Block Blast PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192x192.png">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 10px;
+            transition: background 0.5s ease;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 0 5px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            color: #FFD700;
+            background: linear-gradient(to right, #FFD700, #FFA500, #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .score-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: #FFD700;
+            margin-bottom: 3px;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .level-container {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .level-label {
+            font-size: 0.9rem;
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+
+        .level-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .game-area {
+            margin-bottom: 15px;
+        }
+
+        .next-blocks {
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .next-label {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: #FFD700;
+        }
+
+        .next-blocks-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            min-height: 60px;
+            align-items: center;
+        }
+
+        .next-block {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            flex-direction: column;
+            touch-action: none;
+            position: relative;
+        }
+
+        .next-block.pickup {
+            animation: blockPickup 0.3s ease-out forwards;
+        }
+
+        @keyframes blockPickup {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1.05) rotate(0deg); }
+        }
+
+        .block-shape {
+            display: grid;
+            gap: 2px;
+            padding: 4px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .block-row {
+            display: flex;
+            gap: 2px;
+        }
+
+        .block-cell {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .block-cell::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%);
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .block-cell.highlight::after {
+            opacity: 1;
+        }
+
+        .game-board-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            max-width: 320px;
+            aspect-ratio: 1/1;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            gap: 1px;
+            padding: 4px;
+        }
+
+        .cell {
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .cell.filled {
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell.valid-drop {
+            background: rgba(255, 255, 255, 0.2);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { background: rgba(255, 255, 255, 0.2); }
+            50% { background: rgba(255, 255, 255, 0.4); }
+            100% { background: rgba(255, 255, 255, 0.2); }
+        }
+
+        .cell.clearing {
+            animation: clearAnimation 0.5s forwards;
+        }
+
+        @keyframes clearAnimation {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; box-shadow: 0 0 20px #FFD700; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .cell.place-effect {
+            animation: placeEffect 0.6s ease-out;
+        }
+
+        @keyframes placeEffect {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.3); box-shadow: 0 0 15px currentColor; }
+            50% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        /* Block colors */
+        .block-1 { background: linear-gradient(135deg, #FF6B6B, #FF8E8E); }
+        .block-2 { background: linear-gradient(135deg, #4ECDC4, #88D9E6); }
+        .block-3 { background: linear-gradient(135deg, #FFD166, #FFE8A0); }
+        .block-4 { background: linear-gradient(135deg, #06D6A0, #4ADE80); }
+        .block-5 { background: linear-gradient(135deg, #118AB2, #5AB9EA); }
+        .block-6 { background: linear-gradient(135deg, #9B5DE5, #C78EFF); }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #FFD166, #FF9E6D);
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+            touch-action: manipulation;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        button:active::after {
+            width: 100px;
+            height: 100px;
+        }
+
+        .instructions {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.3;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .game-over-content {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 300px;
+            animation: modalAppear 0.5s ease-out;
+        }
+
+        @keyframes modalAppear {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .game-over h2 {
+            color: #FF6B6B;
+            margin-bottom: 15px;
+            font-size: 2rem;
+        }
+
+        .game-over p {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .combo-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .combo-display.show {
+            animation: comboPop 1s forwards;
+        }
+
+        @keyframes comboPop {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; text-shadow: 0 0 30px #FFD700; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        .level-up-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            z-index: 60;
+            opacity: 0;
+            pointer-events: none;
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            border: 2px solid #FFD700;
+            max-width: 90%;
+        }
+
+        .level-up-message.show {
+            animation: levelUpPop 2s forwards;
+        }
+
+        @keyframes levelUpPop {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        .block-preview {
+            margin-top: 3px;
+            font-size: 0.6rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+        }
+
+        .warning-message {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            animation: warningPulse 2s infinite;
+        }
+
+        @keyframes warningPulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        /* Hiệu ứng nâng cao cho APK */
+        .drag-ghost {
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0.9;
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5));
+            transition: transform 0.1s ease-out;
+        }
+
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .glow-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255,215,0,0.4) 0%, transparent 70%);
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .next-block:hover .glow-effect,
+        .next-block.pickup .glow-effect {
+            opacity: 1;
+        }
+
+        .success-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 998;
+        }
+
+        /* Hiệu ứng rung */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        /* Hiệu ứng phóng to */
+        @keyframes zoomIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .zoom-in {
+            animation: zoomIn 0.3s ease-out;
+        }
+
+        /* CSS mới cho phần tiêu đề và nút Play */
+        .title-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to right, #FFD700, #FFA500, #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .creator {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #FFD166, #FF9E6D);
+            color: #333;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+            margin: 10px auto;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .play-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .play-button:active {
+            transform: translateY(0);
+        }
+
+        /* CSS cho điều khiển âm lượng */
+        .volume-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .volume-slider {
+            width: 0;
+            overflow: hidden;
+            transition: width 0.3s ease;
+        }
+
+        .volume-control:hover .volume-slider {
+            width: 80px;
+        }
+
+        .volume-icon {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            filter: invert(1);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #FFD700;
+            cursor: pointer;
+        }
+
+        /* Màn hình bắt đầu */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            transition: opacity 0.5s ease;
+        }
+
+        .start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Settings */
+        .settings-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 150;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .settings-button svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            padding: 20px;
+        }
+
+        .settings-content {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 300px;
+            animation: modalAppear 0.5s ease-out;
+        }
+
+        .settings-content h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .music-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .music-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .music-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .music-option.active {
+            background: rgba(255, 215, 0, 0.3);
+            border: 1px solid #FFD700;
+        }
+
+        .music-option .checkmark {
+            margin-left: auto;
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        /* Thông báo PWA */
+        .pwa-install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 300;
+            display: none;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .pwa-install-prompt button {
+            margin-top: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Màn hình bắt đầu -->
+    <div class="start-screen" id="start-screen">
+        <div class="title-container">
+            <div class="game-title">BLOCK BLAST</div>
+            <div class="creator">Made by anh ba</div>
+        </div>
+        <button class="play-button" id="play-button">PLAY</button>
+        
+        <!-- Thông báo cài đặt PWA -->
+        <div class="pwa-install-prompt" id="pwa-prompt">
+            <p>Cài đặt Block Blast để chơi offline!</p>
+            <button id="install-pwa">CÀI ĐẶT</button>
+            <button id="dismiss-pwa" style="background: rgba(255,255,255,0.2); color: white; margin-top: 5px;">ĐỂ SAU</button>
+        </div>
+    </div>
+
+    <!-- Giao diện game chính -->
+    <div class="container" id="game-container" style="display: none;">
+        <div class="header">
+            <h1>BLOCK BLAST</h1>
+            <div class="score-container">
+                <div class="score-label">ĐIỂM</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+        </div>
+
+        <div class="level-container">
+            <div class="level-label">CẤP ĐỘ</div>
+            <div class="level-value" id="level">1</div>
+        </div>
+
+        <div class="game-area">
+            <div class="next-blocks">
+                <div class="next-label">CHẠM VÀ KÉO KHỐI:</div>
+                <div class="next-blocks-container" id="next-blocks"></div>
+            </div>
+
+            <div class="game-board-container" id="board-container">
+                <div class="game-board" id="game-board"></div>
+            </div>
+
+            <div class="controls">
+                <button id="rotate-btn">XOAY</button>
+                <button id="reset-btn">CHƠI LẠI</button>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <p>Chạm và kéo khối vào bảng. Hoàn thành hàng/cột để ghi điểm!</p>
+        </div>
+    </div>
+
+    <div class="game-over" id="game-over">
+        <div class="game-over-content">
+            <h2>GAME OVER!</h2>
+            <p>Điểm: <span id="final-score">0</span></p>
+            <p>Cấp: <span id="final-level">1</span></p>
+            <p id="game-over-reason">Không còn chỗ đặt khối!</p>
+            <button id="restart-btn">CHƠI LẠI</button>
+        </div>
+    </div>
+
+    <!-- Nút Settings -->
+    <button class="settings-button" id="settings-button">
+        <svg viewBox="0 0 24 24">
+            <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+        </svg>
+    </button>
+
+    <!-- Panel Settings -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-content">
+            <h2>CÀI ĐẶT</h2>
+            <div class="music-options">
+                <div class="music-option active" data-music="1">
+                    Nhạc nền 1
+                    <span class="checkmark">✓</span>
+                </div>
+                <div class="music-option" data-music="2">
+                    Nhạc nền 2
+                    <span class="checkmark">✓</span>
+                </div>
+                <div class="music-option" data-music="3">
+                    Nhạc nền 3
+                    <span class="checkmark">✓</span>
+                </div>
+                <div class="music-option" data-music="0">
+                    Tắt nhạc
+                    <span class="checkmark">✓</span>
+                </div>
+            </div>
+            <button id="close-settings">ĐÓNG</button>
+        </div>
+    </div>
+
+    <!-- Điều khiển âm lượng -->
+    <div class="volume-control">
+        <div class="volume-slider">
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
+        </div>
+        <svg class="volume-icon" id="volume-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9V15H7L12 20V4L7 9H3Z" fill="currentColor"/>
+            <path id="volume-mute" d="M16 8L20 12M20 8L16 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display: none;"/>
+        </svg>
+    </div>
+
+    <!-- Audio cho nhạc nền - Sử dụng file local cho PWA -->
+    <audio id="background-music-1" loop preload="auto">
+        <!-- File nhạc sẽ được đặt trong thư mục sounds/ -->
+        <source src="sounds/background1.mp3" type="audio/mpeg">
+        <source src="sounds/background1.ogg" type="audio/ogg">
+    </audio>
+    <audio id="background-music-2" loop preload="auto">
+        <source src="sounds/background2.mp3" type="audio/mpeg">
+        <source src="sounds/background2.ogg" type="audio/ogg">
+    </audio>
+    <audio id="background-music-3" loop preload="auto">
+        <source src="sounds/background3.mp3" type="audio/mpeg">
+        <source src="sounds/background3.ogg" type="audio/ogg">
+    </audio>
+
+    <!-- Âm thanh hiệu ứng -->
+    <audio id="place-sound" preload="auto">
+        <source src="sounds/place.mp3" type="audio/mpeg">
+        <source src="sounds/place.ogg" type="audio/ogg">
+    </audio>
+    <audio id="clear-sound" preload="auto">
+        <source src="sounds/clear.mp3" type="audio/mpeg">
+        <source src="sounds/clear.ogg" type="audio/ogg">
+    </audio>
+    <audio id="gameover-sound" preload="auto">
+        <source src="sounds/gameover.mp3" type="audio/mpeg">
+        <source src="sounds/gameover.ogg" type="audio/ogg">
+    </audio>
+
+    <script>
+        class BlockBlastPWA {
+            constructor() {
+                this.boardSize = 8;
+                this.board = [];
+                this.score = 0;
+                this.level = 1;
+                this.nextBlocks = [];
+                this.isGameOver = false;
+                this.currentBlock = null;
+                this.emptyCells = this.boardSize * this.boardSize;
+                this.draggedBlock = null;
+                this.dragOffset = { x: 0, y: 0 };
+                this.gameStarted = false;
+                this.currentMusic = 1;
+                this.audioUnlocked = false;
+                this.deferredPrompt = null;
+                
+                // Audio elements
+                this.backgroundMusic1 = document.getElementById('background-music-1');
+                this.backgroundMusic2 = document.getElementById('background-music-2');
+                this.backgroundMusic3 = document.getElementById('background-music-3');
+                this.placeSound = document.getElementById('place-sound');
+                this.clearSound = document.getElementById('clear-sound');
+                this.gameOverSound = document.getElementById('gameover-sound');
+                this.volumeSlider = document.getElementById('volume-slider');
+                this.volumeIcon = document.getElementById('volume-icon');
+                
+                this.levelMessages = {
+                    1: "Bạn đã hay hơn Tuấn Anh rê bóng!",
+                    2: "Hay hơn Cường cứt chạy phí sức!",
+                    3: "Hay hơn Milu đứng im!",
+                    4: "Hay hơn Tuấn Hưng vừa chụp vừa lọ!"
+                };
+                
+                this.setupPWA();
+                this.setupAudioControls();
+                this.setupSettings();
+                this.setupAudioUnlock();
+            }
+
+            // PWA Installation
+            setupPWA() {
+                // Lắng nghe sự kiện beforeinstallprompt
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.deferredPrompt = e;
+                    this.showInstallPrompt();
+                });
+
+                // Xử lý nút cài đặt PWA
+                document.getElementById('install-pwa').addEventListener('click', async () => {
+                    if (this.deferredPrompt) {
+                        this.deferredPrompt.prompt();
+                        const { outcome } = await this.deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            console.log('User accepted the install prompt');
+                        }
+                        this.deferredPrompt = null;
+                        this.hideInstallPrompt();
+                    }
+                });
+
+                // Xử lý nút bỏ qua
+                document.getElementById('dismiss-pwa').addEventListener('click', () => {
+                    this.hideInstallPrompt();
+                });
+
+                // Kiểm tra nếu app đã được cài đặt
+                window.addEventListener('appinstalled', () => {
+                    console.log('PWA was installed');
+                    this.deferredPrompt = null;
+                    this.hideInstallPrompt();
+                });
+            }
+
+            showInstallPrompt() {
+                const prompt = document.getElementById('pwa-prompt');
+                prompt.style.display = 'block';
+            }
+
+            hideInstallPrompt() {
+                const prompt = document.getElementById('pwa-prompt');
+                prompt.style.display = 'none';
+            }
+
+            setupAudioUnlock() {
+                const unlockAudio = () => {
+                    if (this.audioUnlocked) return;
+                    
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        const audioContext = new AudioContext();
+                        if (audioContext.state === 'suspended') {
+                            audioContext.resume();
+                        }
+                    }
+                    
+                    const tryUnlock = (audio) => {
+                        if (audio && audio.paused) {
+                            audio.play().then(() => {
+                                audio.pause();
+                                audio.currentTime = 0;
+                                this.audioUnlocked = true;
+                                console.log("Audio unlocked successfully");
+                            }).catch(e => {
+                                console.log("Audio unlock attempt failed:", e);
+                            });
+                        }
+                    };
+                    
+                    tryUnlock(this.backgroundMusic1);
+                    tryUnlock(this.backgroundMusic2);
+                    tryUnlock(this.backgroundMusic3);
+                    tryUnlock(this.placeSound);
+                    tryUnlock(this.clearSound);
+                    tryUnlock(this.gameOverSound);
+                };
+                
+                document.addEventListener('click', unlockAudio, { once: true });
+                document.addEventListener('touchstart', unlockAudio, { once: true });
+                document.getElementById('play-button').addEventListener('click', unlockAudio);
+            }
+
+            setupAudioControls() {
+                this.setVolume(this.volumeSlider.value);
+                
+                this.volumeSlider.addEventListener('input', () => {
+                    this.setVolume(this.volumeSlider.value);
+                });
+                
+                this.volumeIcon.addEventListener('click', () => {
+                    if (this.volumeSlider.value > 0) {
+                        this.setVolume(0);
+                        this.volumeSlider.value = 0;
+                    } else {
+                        this.setVolume(0.5);
+                        this.volumeSlider.value = 0.5;
+                    }
+                    this.updateVolumeIcon();
+                });
+            }
+
+            setVolume(volume) {
+                this.backgroundMusic1.volume = volume;
+                this.backgroundMusic2.volume = volume;
+                this.backgroundMusic3.volume = volume;
+                this.placeSound.volume = volume;
+                this.clearSound.volume = volume;
+                this.gameOverSound.volume = volume;
+                this.updateVolumeIcon();
+            }
+            
+            updateVolumeIcon() {
+                const muteLine = document.getElementById('volume-mute');
+                if (this.volumeSlider.value === 0) {
+                    muteLine.style.display = 'block';
+                } else {
+                    muteLine.style.display = 'none';
+                }
+            }
+
+            playSound(soundName) {
+                if (!this.audioUnlocked) return;
+                
+                try {
+                    const sound = document.getElementById(soundName);
+                    if (sound) {
+                        sound.currentTime = 0;
+                        sound.play().catch(e => {
+                            console.log(`Không thể phát âm thanh ${soundName}:`, e);
+                        });
+                    }
+                } catch (error) {
+                    console.log("Lỗi phát âm thanh:", error);
+                }
+            }
+
+            setupSettings() {
+                const settingsButton = document.getElementById('settings-button');
+                const settingsPanel = document.getElementById('settings-panel');
+                const closeSettings = document.getElementById('close-settings');
+                const musicOptions = document.querySelectorAll('.music-option');
+                
+                settingsButton.addEventListener('click', () => {
+                    settingsPanel.style.display = 'flex';
+                });
+                
+                closeSettings.addEventListener('click', () => {
+                    settingsPanel.style.display = 'none';
+                });
+                
+                musicOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        musicOptions.forEach(opt => opt.classList.remove('active'));
+                        option.classList.add('active');
+                        
+                        const musicId = parseInt(option.getAttribute('data-music'));
+                        this.changeBackgroundMusic(musicId);
+                    });
+                });
+            }
+
+            changeBackgroundMusic(musicId) {
+                this.backgroundMusic1.pause();
+                this.backgroundMusic2.pause();
+                this.backgroundMusic3.pause();
+                
+                this.currentMusic = musicId;
+                
+                if (musicId === 0) return;
+                
+                const selectedMusic = document.getElementById(`background-music-${musicId}`);
+                if (selectedMusic && this.gameStarted && this.audioUnlocked) {
+                    selectedMusic.currentTime = 0;
+                    selectedMusic.play().catch(e => {
+                        console.log("Không thể phát nhạc:", e);
+                    });
+                }
+            }
+
+            startGame() {
+                this.gameStarted = true;
+                document.getElementById('start-screen').classList.add('hidden');
+                document.getElementById('game-container').style.display = 'block';
+                
+                const tryPlayMusic = () => {
+                    if (this.currentMusic > 0) {
+                        const selectedMusic = document.getElementById(`background-music-${this.currentMusic}`);
+                        if (selectedMusic) {
+                            selectedMusic.currentTime = 0;
+                            selectedMusic.play().catch(e => {
+                                console.log("Không thể phát nhạc tự động:", e);
+                            });
+                        }
+                    }
+                };
+                
+                setTimeout(tryPlayMusic, 500);
+                this.initializeGame();
+            }
+
+            initializeGame() {
+                this.createBoard();
+                this.generateNextBlocks();
+                this.updateDisplay();
+                this.checkGameState();
+            }
+
+            createBoard() {
+                this.board = Array(this.boardSize).fill().map(() => 
+                    Array(this.boardSize).fill(0)
+                );
+                
+                const gameBoard = document.getElementById('game-board');
+                gameBoard.innerHTML = '';
+                
+                for (let y = 0; y < this.boardSize; y++) {
+                    for (let x = 0; x < this.boardSize; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.setAttribute('data-x', x);
+                        cell.setAttribute('data-y', y);
+                        gameBoard.appendChild(cell);
+                    }
+                }
+            }
+
+            generateNextBlocks() {
+                this.nextBlocks = [];
+                const shapes = this.getBlockShapes();
+                
+                for (let i = 0; i < 3; i++) {
+                    const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+                    const randomColor = Math.floor(Math.random() * 6) + 1;
+                    this.nextBlocks.push({
+                        shape: randomShape,
+                        color: randomColor,
+                        canPlace: true
+                    });
+                }
+                
+                this.updateNextBlocksDisplay();
+            }
+
+            getBlockShapes() {
+                return [
+                    [[1]], [[1, 1]], [[1, 1, 1]], 
+                    [[1, 1], [1, 1]], [[1, 0], [1, 1]], 
+                    [[0, 1], [1, 1]], [[1, 1, 0], [0, 1, 1]],
+                    [[0, 1, 1], [1, 1, 0]], [[1, 1, 1], [0, 1, 0]],
+                    [[1], [1]], [[1], [1], [1]],
+                    [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+                    [[1, 1, 1, 1]], [[1], [1], [1], [1]]
+                ];
+            }
+
+            updateNextBlocksDisplay() {
+                const nextBlocksContainer = document.getElementById('next-blocks');
+                nextBlocksContainer.innerHTML = '';
+                
+                this.nextBlocks.forEach((block, index) => {
+                    const blockElement = document.createElement('div');
+                    blockElement.className = `next-block ${block.canPlace ? '' : 'cannot-place'}`;
+                    blockElement.setAttribute('data-block-index', index);
+                    
+                    const glowEffect = document.createElement('div');
+                    glowEffect.className = 'glow-effect';
+                    blockElement.appendChild(glowEffect);
+                    
+                    const shapeContainer = document.createElement('div');
+                    shapeContainer.className = 'block-shape';
+                    
+                    block.shape.forEach(row => {
+                        const rowElement = document.createElement('div');
+                        rowElement.className = 'block-row';
+                        
+                        row.forEach(cell => {
+                            const cellElement = document.createElement('div');
+                            if (cell) {
+                                cellElement.className = `block-cell block-${block.color}`;
+                            } else {
+                                cellElement.className = 'block-cell';
+                                cellElement.style.background = 'transparent';
+                            }
+                            rowElement.appendChild(cellElement);
+                        });
+                        
+                        shapeContainer.appendChild(rowElement);
+                    });
+                    
+                    blockElement.appendChild(shapeContainer);
+                    
+                    const sizeInfo = document.createElement('div');
+                    sizeInfo.className = 'block-preview';
+                    sizeInfo.textContent = `${block.shape[0].length}×${block.shape.length}`;
+                    blockElement.appendChild(sizeInfo);
+                    
+                    if (block.canPlace) {
+                        this.setupBlockDrag(blockElement, index);
+                    }
+                    nextBlocksContainer.appendChild(blockElement);
+                });
+            }
+
+            setupBlockDrag(blockElement, blockIndex) {
+                let isDragging = false;
+                
+                blockElement.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (this.isGameOver) return;
+                    
+                    const touch = e.touches[0];
+                    this.startDrag(blockIndex, touch.clientX, touch.clientY);
+                    isDragging = true;
+                    
+                    blockElement.classList.add('pickup');
+                    this.createParticles(touch.clientX, touch.clientY, 8);
+                });
+                
+                blockElement.addEventListener('mousedown', (e) => {
+                    if (this.isGameOver) return;
+                    
+                    this.startDrag(blockIndex, e.clientX, e.clientY);
+                    isDragging = true;
+                    blockElement.classList.add('pickup');
+                    this.createParticles(e.clientX, e.clientY, 8);
+                });
+                
+                document.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    this.dragMove(touch.clientX, touch.clientY);
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    this.dragMove(e.clientX, e.clientY);
+                });
+                
+                document.addEventListener('touchend', (e) => {
+                    if (!isDragging) return;
+                    this.endDrag();
+                    isDragging = false;
+                    blockElement.classList.remove('pickup');
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (!isDragging) return;
+                    this.endDrag();
+                    isDragging = false;
+                    blockElement.classList.remove('pickup');
+                });
+            }
+
+            startDrag(blockIndex, clientX, clientY) {
+                this.currentBlock = this.nextBlocks[blockIndex];
+                
+                this.draggedBlock = document.createElement('div');
+                this.draggedBlock.className = 'drag-ghost';
+                this.draggedBlock.style.transform = 'scale(1.1) rotate(5deg)';
+                
+                this.currentBlock.shape.forEach(row => {
+                    const rowElement = document.createElement('div');
+                    rowElement.className = 'block-row';
+                    
+                    row.forEach(cell => {
+                        const cellElement = document.createElement('div');
+                        if (cell) {
+                            cellElement.className = `block-cell block-${this.currentBlock.color} highlight`;
+                            cellElement.style.width = '25px';
+                            cellElement.style.height = '25px';
+                            cellElement.style.boxShadow = '0 0 10px rgba(255,255,255,0.5)';
+                        } else {
+                            cellElement.className = 'block-cell';
+                            cellElement.style.background = 'transparent';
+                        }
+                        rowElement.appendChild(cellElement);
+                    });
+                    
+                    this.draggedBlock.appendChild(rowElement);
+                });
+                
+                document.body.appendChild(this.draggedBlock);
+                this.dragMove(clientX, clientY);
+            }
+
+            dragMove(clientX, clientY) {
+                if (!this.draggedBlock) return;
+                
+                this.draggedBlock.style.left = (clientX - this.draggedBlock.offsetWidth / 2) + 'px';
+                this.draggedBlock.style.top = (clientY - this.draggedBlock.offsetHeight / 2) + 'px';
+                this.draggedBlock.style.transform = `scale(1.1) rotate(${Math.sin(Date.now() * 0.01) * 2}deg)`;
+                
+                this.highlightValidPositions(clientX, clientY);
+            }
+
+            highlightValidPositions(clientX, clientY) {
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('valid-drop');
+                });
+                
+                const board = document.getElementById('game-board');
+                const boardRect = board.getBoundingClientRect();
+                
+                if (clientX >= boardRect.left && clientX <= boardRect.right &&
+                    clientY >= boardRect.top && clientY <= boardRect.bottom) {
+                    
+                    const cellSize = boardRect.width / this.boardSize;
+                    const boardX = Math.floor((clientX - boardRect.left) / cellSize);
+                    const boardY = Math.floor((clientY - boardRect.top) / cellSize);
+                    
+                    if (this.isValidPlacement(this.currentBlock.shape, boardX, boardY)) {
+                        for (let dy = 0; dy < this.currentBlock.shape.length; dy++) {
+                            for (let dx = 0; dx < this.currentBlock.shape[dy].length; dx++) {
+                                if (this.currentBlock.shape[dy][dx]) {
+                                    const cellX = boardX + dx;
+                                    const cellY = boardY + dy;
+                                    if (cellX < this.boardSize && cellY < this.boardSize) {
+                                        const cell = document.querySelector(`.cell[data-x="${cellX}"][data-y="${cellY}"]`);
+                                        if (cell) {
+                                            cell.classList.add('valid-drop');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            endDrag() {
+                if (!this.draggedBlock) return;
+                
+                const rect = this.draggedBlock.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                const board = document.getElementById('game-board');
+                const boardRect = board.getBoundingClientRect();
+                
+                if (centerX >= boardRect.left && centerX <= boardRect.right &&
+                    centerY >= boardRect.top && centerY <= boardRect.bottom) {
+                    
+                    const cellSize = boardRect.width / this.boardSize;
+                    const boardX = Math.floor((centerX - boardRect.left) / cellSize);
+                    const boardY = Math.floor((centerY - boardRect.top) / cellSize);
+                    
+                    const blockIndex = this.nextBlocks.findIndex(block => 
+                        block === this.currentBlock
+                    );
+                    
+                    if (blockIndex !== -1) {
+                        this.createParticles(centerX, centerY, 12);
+                        setTimeout(() => {
+                            this.placeBlock(blockIndex, boardX, boardY);
+                        }, 100);
+                    }
+                } else {
+                    this.createParticles(centerX, centerY, 6);
+                }
+                
+                this.draggedBlock.style.transition = 'all 0.3s ease';
+                this.draggedBlock.style.opacity = '0';
+                this.draggedBlock.style.transform = 'scale(0.5)';
+                
+                setTimeout(() => {
+                    if (this.draggedBlock) {
+                        this.draggedBlock.remove();
+                        this.draggedBlock = null;
+                    }
+                }, 300);
+                
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('valid-drop');
+                });
+            }
+
+            createParticles(x, y, count) {
+                const container = document.createElement('div');
+                container.className = 'success-particles';
+                document.body.appendChild(container);
+                
+                for (let i = 0; i < count; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = x + 'px';
+                    particle.style.top = y + 'px';
+                    
+                    const angle = (i / count) * Math.PI * 2;
+                    const distance = 30 + Math.random() * 50;
+                    const duration = 0.5 + Math.random() * 0.5;
+                    
+                    particle.style.animation = `
+                        particleMove ${duration}s ease-out forwards
+                    `;
+                    
+                    particle.style.setProperty('--end-x', Math.cos(angle) * distance + 'px');
+                    particle.style.setProperty('--end-y', Math.sin(angle) * distance + 'px');
+                    
+                    container.appendChild(particle);
+                }
+                
+                setTimeout(() => {
+                    container.remove();
+                }, 1000);
+            }
+
+            addParticleStyles() {
+                if (!document.getElementById('particle-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'particle-styles';
+                    style.textContent = `
+                        @keyframes particleMove {
+                            0% {
+                                transform: translate(0, 0);
+                                opacity: 1;
+                            }
+                            100% {
+                                transform: translate(var(--end-x), var(--end-y));
+                                opacity: 0;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+
+            isValidPlacement(shape, startX, startY) {
+                if (startX < 0 || startY < 0) return false;
+                if (startX + shape[0].length > this.boardSize || startY + shape.length > this.boardSize) {
+                    return false;
+                }
+
+                for (let dy = 0; dy < shape.length; dy++) {
+                    for (let dx = 0; dx < shape[dy].length; dx++) {
+                        if (shape[dy][dx]) {
+                            const boardX = startX + dx;
+                            const boardY = startY + dy;
+                            
+                            if (this.board[boardY][boardX] !== 0) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+
+            placeBlock(blockIndex, startX, startY) {
+                const block = this.nextBlocks[blockIndex];
+                
+                if (!this.isValidPlacement(block.shape, startX, startY)) {
+                    this.showMessage('Vị trí không hợp lệ!', 'error');
+                    document.getElementById('game-board').classList.add('shake');
+                    setTimeout(() => {
+                        document.getElementById('game-board').classList.remove('shake');
+                    }, 300);
+                    return false;
+                }
+
+                let cellsFilled = 0;
+                const placedCells = [];
+                
+                for (let dy = 0; dy < block.shape.length; dy++) {
+                    for (let dx = 0; dx < block.shape[dy].length; dx++) {
+                        if (block.shape[dy][dx]) {
+                            const boardX = startX + dx;
+                            const boardY = startY + dy;
+                            this.board[boardY][boardX] = block.color;
+                            cellsFilled++;
+                            placedCells.push({x: boardX, y: boardY});
+                        }
+                    }
+                }
+
+                this.playSound('place-sound');
+
+                placedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-x="${cell.x}"][data-y="${cell.y}"]`);
+                    if (cellElement) {
+                        cellElement.classList.add('place-effect', 'zoom-in');
+                        setTimeout(() => {
+                            cellElement.classList.remove('place-effect', 'zoom-in');
+                        }, 600);
+                    }
+                });
+
+                this.createParticles(
+                    document.getElementById('game-board').getBoundingClientRect().left + startX * 40 + 20,
+                    document.getElementById('game-board').getBoundingClientRect().top + startY * 40 + 20,
+                    15
+                );
+
+                this.nextBlocks.splice(blockIndex, 1);
+                
+                const clearedLines = this.checkAndClearLines();
+                this.updateScore(clearedLines, cellsFilled);
+                
+                const oldLevel = this.level;
+                this.checkLevelUp();
+                
+                if (this.nextBlocks.length === 0) {
+                    this.generateNextBlocks();
+                }
+                
+                this.updateDisplay();
+                
+                if (!this.checkGameState()) {
+                    if (this.nextBlocks.length === 0) {
+                        this.generateNextBlocks();
+                        this.checkGameState();
+                    }
+                }
+                
+                if (this.level > oldLevel) {
+                    this.showLevelUpMessage();
+                }
+                
+                return true;
+            }
+
+            checkAndClearLines() {
+                let clearedLines = 0;
+                const rowsToClear = [];
+                const columnsToClear = [];
+                
+                for (let y = 0; y < this.boardSize; y++) {
+                    if (this.board[y].every(cell => cell !== 0)) {
+                        rowsToClear.push(y);
+                        clearedLines++;
+                    }
+                }
+                
+                for (let x = 0; x < this.boardSize; x++) {
+                    let columnFull = true;
+                    for (let y = 0; y < this.boardSize; y++) {
+                        if (this.board[y][x] === 0) {
+                            columnFull = false;
+                            break;
+                        }
+                    }
+                    if (columnFull) {
+                        columnsToClear.push(x);
+                        clearedLines++;
+                    }
+                }
+                
+                rowsToClear.forEach(row => this.clearRow(row));
+                columnsToClear.forEach(column => this.clearColumn(column));
+                
+                return clearedLines;
+            }
+
+            clearRow(row) {
+                const cells = document.querySelectorAll(`.cell[data-y="${row}"]`);
+                cells.forEach(cell => {
+                    cell.classList.add('clearing');
+                });
+                
+                this.playSound('clear-sound');
+                
+                setTimeout(() => {
+                    for (let x = 0; x < this.boardSize; x++) {
+                        this.board[row][x] = 0;
+                    }
+                    this.updateDisplay();
+                    this.createParticles(
+                        document.getElementById('game-board').getBoundingClientRect().left + 160,
+                        document.getElementById('game-board').getBoundingClientRect().top + row * 40 + 20,
+                        20
+                    );
+                }, 500);
+            }
+
+            clearColumn(column) {
+                const cells = document.querySelectorAll(`.cell[data-x="${column}"]`);
+                cells.forEach(cell => {
+                    cell.classList.add('clearing');
+                });
+                
+                this.playSound('clear-sound');
+                
+                setTimeout(() => {
+                    for (let y = 0; y < this.boardSize; y++) {
+                        this.board[y][column] = 0;
+                    }
+                    this.updateDisplay();
+                    this.createParticles(
+                        document.getElementById('game-board').getBoundingClientRect().left + column * 40 + 20,
+                        document.getElementById('game-board').getBoundingClientRect().top + 160,
+                        20
+                    );
+                }, 500);
+            }
+
+            updateScore(clearedLines, cellsFilled = 0) {
+                let points = cellsFilled * 5;
+                
+                if (clearedLines > 0) {
+                    points += clearedLines * 100;
+                    
+                    if (clearedLines > 1) {
+                        this.showCombo(`COMBO ${clearedLines} DÒNG!`);
+                    }
+                }
+                
+                this.score += points;
+                this.updateBackground();
+            }
+
+            checkLevelUp() {
+                const newLevel = Math.floor(this.score / 500) + 1;
+                if (newLevel > this.level) {
+                    this.level = newLevel;
+                    document.getElementById('level').textContent = this.level;
+                }
+            }
+
+            showLevelUpMessage() {
+                let message = "";
+                if (this.level <= 2) {
+                    message = this.levelMessages[1];
+                } else if (this.level <= 4) {
+                    message = this.levelMessages[2];
+                } else if (this.level <= 6) {
+                    message = this.levelMessages[3];
+                } else {
+                    message = this.levelMessages[4];
+                }
+                
+                const levelUpDiv = document.createElement('div');
+                levelUpDiv.className = 'level-up-message show';
+                levelUpDiv.textContent = `CẤP ${this.level}! ${message}`;
+                document.body.appendChild(levelUpDiv);
+                
+                this.createParticles(window.innerWidth / 2, window.innerHeight / 2, 25);
+                
+                setTimeout(() => {
+                    levelUpDiv.remove();
+                }, 2000);
+            }
+
+            updateDisplay() {
+                for (let y = 0; y < this.boardSize; y++) {
+                    for (let x = 0; x < this.boardSize; x++) {
+                        const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+                        cell.className = 'cell';
+                        
+                        if (this.board[y][x] !== 0) {
+                            cell.classList.add('filled', `block-${this.board[y][x]}`);
+                        }
+                    }
+                }
+                
+                document.getElementById('score').textContent = this.score;
+            }
+
+            setupEventListeners() {
+                document.getElementById('rotate-btn').addEventListener('click', () => {
+                    this.rotateCurrentBlock();
+                });
+                
+                document.getElementById('reset-btn').addEventListener('click', () => {
+                    this.restartGame();
+                });
+                
+                document.getElementById('restart-btn').addEventListener('click', () => {
+                    this.restartGame();
+                });
+                
+                document.getElementById('play-button').addEventListener('click', () => {
+                    this.startGame();
+                });
+            }
+
+            canBlockBePlacedAnywhere(block) {
+                for (let y = 0; y <= this.boardSize - block.shape.length; y++) {
+                    for (let x = 0; x <= this.boardSize - block.shape[0].length; x++) {
+                        if (this.isValidPlacement(block.shape, x, y)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            checkGameState() {
+                this.emptyCells = 0;
+                for (let y = 0; y < this.boardSize; y++) {
+                    for (let x = 0; x < this.boardSize; x++) {
+                        if (this.board[y][x] === 0) {
+                            this.emptyCells++;
+                        }
+                    }
+                }
+
+                let allBlocksCannotBePlaced = true;
+                this.nextBlocks.forEach(block => {
+                    block.canPlace = this.canBlockBePlacedAnywhere(block);
+                    if (block.canPlace) {
+                        allBlocksCannotBePlaced = false;
+                    }
+                });
+
+                this.updateNextBlocksDisplay();
+                this.showSpaceWarning();
+
+                if (allBlocksCannotBePlaced) {
+                    setTimeout(() => this.endGame('Không còn chỗ để đặt khối!'), 500);
+                    return true;
+                }
+
+                return false;
+            }
+
+            showSpaceWarning() {
+                const existingWarning = document.querySelector('.warning-message');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+
+                if (this.emptyCells < 5) {
+                    const warning = document.createElement('div');
+                    warning.className = 'warning-message';
+                    warning.textContent = `Còn ${this.emptyCells} ô trống!`;
+                    document.getElementById('board-container').appendChild(warning);
+                }
+            }
+
+            rotateCurrentBlock() {
+                if (this.nextBlocks.length > 0) {
+                    const block = this.nextBlocks[0];
+                    const rows = block.shape.length;
+                    const cols = block.shape[0].length;
+                    const rotated = Array(cols).fill().map(() => Array(rows).fill(0));
+                    
+                    for (let y = 0; y < rows; y++) {
+                        for (let x = 0; x < cols; x++) {
+                            rotated[x][rows - 1 - y] = block.shape[y][x];
+                        }
+                    }
+                    
+                    block.shape = rotated;
+                    block.canPlace = this.canBlockBePlacedAnywhere(block);
+                    this.updateNextBlocksDisplay();
+                    this.showMessage('Đã xoay khối!', 'info');
+                    
+                    const blockElement = document.querySelector('.next-block[data-block-index="0"]');
+                    if (blockElement) {
+                        blockElement.style.transform = 'rotate(90deg)';
+                        setTimeout(() => {
+                            blockElement.style.transform = 'rotate(0deg)';
+                        }, 300);
+                    }
+                }
+            }
+
+            updateBackground() {
+                const scoreRanges = [
+                    { threshold: 0, gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+                    { threshold: 500, gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+                    { threshold: 1000, gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+                    { threshold: 1500, gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+                    { threshold: 2000, gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
+                ];
+                
+                let currentGradient = scoreRanges[0].gradient;
+                for (const range of scoreRanges) {
+                    if (this.score >= range.threshold) {
+                        currentGradient = range.gradient;
+                    }
+                }
+                
+                document.body.style.background = currentGradient;
+            }
+
+            endGame(reason) {
+                this.isGameOver = true;
+                document.getElementById('final-score').textContent = this.score;
+                document.getElementById('final-level').textContent = this.level;
+                document.getElementById('game-over-reason').textContent = reason;
+                document.getElementById('game-over').style.display = 'flex';
+                
+                this.playSound('gameover-sound');
+                
+                if (this.currentMusic > 0) {
+                    const currentMusic = document.getElementById(`background-music-${this.currentMusic}`);
+                    if (currentMusic) {
+                        currentMusic.pause();
+                        currentMusic.currentTime = 0;
+                    }
+                }
+                
+                this.createParticles(window.innerWidth / 2, window.innerHeight / 2, 30);
+            }
+
+            restartGame() {
+                this.score = 0;
+                this.level = 1;
+                this.isGameOver = false;
+                this.nextBlocks = [];
+                this.emptyCells = this.boardSize * this.boardSize;
+                this.createBoard();
+                this.generateNextBlocks();
+                this.updateDisplay();
+                this.updateBackground();
+                this.checkGameState();
+                document.getElementById('game-over').style.display = 'none';
+                
+                document.getElementById('level').textContent = this.level;
+                
+                if (this.currentMusic > 0) {
+                    const selectedMusic = document.getElementById(`background-music-${this.currentMusic}`);
+                    if (selectedMusic && this.audioUnlocked) {
+                        selectedMusic.currentTime = 0;
+                        selectedMusic.play().catch(e => {
+                            console.log("Không thể phát nhạc khi restart:", e);
+                        });
+                    }
+                }
+                
+                const warning = document.querySelector('.warning-message');
+                if (warning) {
+                    warning.remove();
+                }
+            }
+
+            showCombo(message) {
+                const comboDisplay = document.createElement('div');
+                comboDisplay.className = 'combo-display show';
+                comboDisplay.textContent = message;
+                document.body.appendChild(comboDisplay);
+                
+                this.createParticles(window.innerWidth / 2, window.innerHeight / 2, 20);
+                
+                setTimeout(() => {
+                    document.body.removeChild(comboDisplay);
+                }, 1000);
+            }
+
+            showMessage(message, type) {
+                const messageDiv = document.createElement('div');
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: ${type === 'error' ? 'rgba(255,107,107,0.9)' : 'rgba(76,175,80,0.9)'};
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 15px;
+                    z-index: 1000;
+                    font-size: 0.8rem;
+                    animation: zoomIn 0.3s ease-out;
+                `;
+                messageDiv.textContent = message;
+                document.body.appendChild(messageDiv);
+                
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 1500);
+            }
+        }
+
+        // Khởi tạo game
+        document.addEventListener('DOMContentLoaded', () => {
+            const game = new BlockBlastPWA();
+            game.addParticleStyles();
+            game.setupEventListeners();
+            
+            document.addEventListener('touchmove', (e) => {
+                if (e.scale !== 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        });
+
+        // Service Worker cho PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
