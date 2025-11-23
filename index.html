@@ -718,21 +718,25 @@
             font-weight: bold;
         }
 
-        /* Thông báo PWA */
+        /* Thông báo PWA - UPDATED STYLES */
         .pwa-install-prompt {
             position: fixed;
             bottom: 20px;
             left: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 15px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid #FFD700;
             z-index: 300;
-            display: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
             animation: slideUp 0.5s ease-out;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         @keyframes slideUp {
@@ -740,9 +744,64 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-        .pwa-install-prompt button {
-            margin-top: 10px;
+        .pwa-install-prompt p {
+            margin-bottom: 15px;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .pwa-install-buttons {
+            display: flex;
+            gap: 10px;
             width: 100%;
+        }
+
+        .pwa-install-buttons button {
+            flex: 1;
+            margin: 0;
+        }
+
+        #install-pwa {
+            background: linear-gradient(135deg, #FFD166, #FF9E6D);
+            color: #333;
+        }
+
+        #dismiss-pwa {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        /* Manual install button */
+        .manual-install-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 215, 0, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 150;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .manual-install-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #333;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -755,11 +814,21 @@
         </div>
         <button class="play-button" id="play-button">PLAY</button>
         
+        <!-- Nút cài đặt thủ công -->
+        <button class="manual-install-btn" id="manual-install-btn" title="Tải ứng dụng">
+            <svg viewBox="0 0 24 24">
+                <path d="M19,9H15V3H9V9H5L12,16L19,9M5,18V20H19V18H5Z"/>
+            </svg>
+        </button>
+        
         <!-- Thông báo cài đặt PWA -->
-        <div class="pwa-install-prompt" id="pwa-prompt">
-            <p>Cài đặt Block Blast để chơi offline!</p>
-            <button id="install-pwa">CÀI ĐẶT</button>
-            <button id="dismiss-pwa" style="background: rgba(255,255,255,0.2); color: white; margin-top: 5px;">ĐỂ SAU</button>
+        <div class="pwa-install-prompt" id="pwa-prompt" style="display: none;">
+            <p>🎮 <strong>Tải Block Blast về máy!</strong></p>
+            <p>Chơi offline mọi lúc, không cần internet</p>
+            <div class="pwa-install-buttons">
+                <button id="install-pwa">TẢI VỀ NGAY</button>
+                <button id="dismiss-pwa">ĐỂ SAU</button>
+            </div>
         </div>
     </div>
 
@@ -899,6 +968,7 @@
                 this.currentMusic = 1;
                 this.audioUnlocked = false;
                 this.deferredPrompt = null;
+                this.installPromptShown = false;
                 
                 // Audio elements
                 this.backgroundMusic1 = document.getElementById('background-music-1');
@@ -921,16 +991,24 @@
                 this.setupAudioControls();
                 this.setupSettings();
                 this.setupAudioUnlock();
-                this.setupOfflineDetection(); // ADDED OFFLINE DETECTION
+                this.setupOfflineDetection();
+                this.setupManualInstall(); // NEW: Manual install button
             }
 
-            // PWA Installation
+            // PWA Installation - UPDATED
             setupPWA() {
                 // Lắng nghe sự kiện beforeinstallprompt
                 window.addEventListener('beforeinstallprompt', (e) => {
+                    console.log('beforeinstallprompt event fired');
                     e.preventDefault();
                     this.deferredPrompt = e;
-                    this.showInstallPrompt();
+                    
+                    // Hiển thị prompt sau 2 giây
+                    setTimeout(() => {
+                        if (!this.installPromptShown) {
+                            this.showInstallPrompt();
+                        }
+                    }, 2000);
                 });
 
                 // Xử lý nút cài đặt PWA
@@ -938,17 +1016,25 @@
                     if (this.deferredPrompt) {
                         this.deferredPrompt.prompt();
                         const { outcome } = await this.deferredPrompt.userChoice;
+                        console.log('User response to the install prompt:', outcome);
                         if (outcome === 'accepted') {
                             console.log('User accepted the install prompt');
+                            this.showMessage('Đang tải ứng dụng...', 'info');
                         }
                         this.deferredPrompt = null;
                         this.hideInstallPrompt();
+                        this.installPromptShown = true;
+                    } else {
+                        this.showInstallInstructions();
                     }
                 });
 
                 // Xử lý nút bỏ qua
                 document.getElementById('dismiss-pwa').addEventListener('click', () => {
                     this.hideInstallPrompt();
+                    this.installPromptShown = true;
+                    // Lưu vào localStorage để không hiển thị lại trong 7 ngày
+                    localStorage.setItem('pwaDismissed', Date.now().toString());
                 });
 
                 // Kiểm tra nếu app đã được cài đặt
@@ -956,7 +1042,98 @@
                     console.log('PWA was installed');
                     this.deferredPrompt = null;
                     this.hideInstallPrompt();
+                    this.installPromptShown = true;
+                    this.showMessage('Ứng dụng đã được cài đặt thành công! 🎉', 'info');
                 });
+
+                // Kiểm tra nếu đã từ chối trước đó
+                this.checkPreviousDismissal();
+            }
+
+            // NEW: Manual install button setup
+            setupManualInstall() {
+                const manualInstallBtn = document.getElementById('manual-install-btn');
+                manualInstallBtn.addEventListener('click', () => {
+                    if (this.deferredPrompt) {
+                        this.showInstallPrompt();
+                    } else {
+                        this.showInstallInstructions();
+                    }
+                });
+            }
+
+            // NEW: Show installation instructions for different platforms
+            showInstallInstructions() {
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const isAndroid = /Android/.test(navigator.userAgent);
+                const isChrome = /Chrome/.test(navigator.userAgent);
+                
+                let instructions = '';
+                
+                if (isIOS) {
+                    instructions = `
+                        <p><strong>Hướng dẫn cài đặt trên iOS:</strong></p>
+                        <ol style="text-align: left; margin: 10px 0;">
+                            <li>Nhấn nút "Share" (hộp với mũi tên lên)</li>
+                            <li>Chọn "Add to Home Screen"</li>
+                            <li>Nhấn "Add" để hoàn tất</li>
+                        </ol>
+                    `;
+                } else if (isAndroid && isChrome) {
+                    instructions = `
+                        <p><strong>Hướng dẫn cài đặt trên Android:</strong></p>
+                        <ol style="text-align: left; margin: 10px 0;">
+                            <li>Nhấn vào menu (3 chấm)</li>
+                            <li>Chọn "Add to Home screen"</li>
+                            <li>Nhấn "Add" để hoàn tất</li>
+                        </ol>
+                    `;
+                } else {
+                    instructions = `
+                        <p><strong>Hướng dẫn cài đặt:</strong></p>
+                        <ol style="text-align: left; margin: 10px 0;">
+                            <li>Tìm biểu tượng cài đặt trong trình duyệt</li>
+                            <li>Chọn "Install" hoặc "Add to Home screen"</li>
+                            <li>Xác nhận để hoàn tất cài đặt</li>
+                        </ol>
+                    `;
+                }
+                
+                this.showMessage(instructions, 'info', 8000);
+            }
+
+            checkPreviousDismissal() {
+                const dismissedTime = localStorage.getItem('pwaDismissed');
+                if (dismissedTime) {
+                    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                    const timeSinceDismissal = Date.now() - parseInt(dismissedTime);
+                    if (timeSinceDismissal < sevenDays) {
+                        this.installPromptShown = true;
+                    } else {
+                        localStorage.removeItem('pwaDismissed');
+                    }
+                }
+            }
+
+            // UPDATED: Show install prompt
+            showInstallPrompt() {
+                if (this.installPromptShown) return;
+                
+                const prompt = document.getElementById('pwa-prompt');
+                prompt.style.display = 'flex';
+                this.installPromptShown = true;
+                
+                // Tự động ẩn sau 15 giây
+                setTimeout(() => {
+                    if (prompt.style.display === 'flex') {
+                        this.hideInstallPrompt();
+                    }
+                }, 15000);
+            }
+
+            hideInstallPrompt() {
+                const prompt = document.getElementById('pwa-prompt');
+                prompt.style.display = 'none';
             }
 
             // ADDED OFFLINE DETECTION METHOD
@@ -973,16 +1150,6 @@
                 if (!navigator.onLine) {
                     this.showMessage('Đang ở chế độ ngoại tuyến', 'info');
                 }
-            }
-
-            showInstallPrompt() {
-                const prompt = document.getElementById('pwa-prompt');
-                prompt.style.display = 'block';
-            }
-
-            hideInstallPrompt() {
-                const prompt = document.getElementById('pwa-prompt');
-                prompt.style.display = 'none';
             }
 
             setupAudioUnlock() {
@@ -1190,10 +1357,7 @@
                     [[1, 1]], // 2 in a row
                     [[1, 1, 1]], // 3 in a row
                     [[1, 1], [1, 1]], // 2x2 square
-                    
-                    // 🔥 THÊM KHỐI L 1x3 - MỚI
                     [[1, 0], [1, 0], [1, 1]], // L shape 1x3
-                    
                     [[1, 0], [1, 1]], // L shape nhỏ
                     [[0, 1], [1, 1]], // Reverse L shape nhỏ
                     [[1, 1, 0], [0, 1, 1]], // Z shape
@@ -1896,27 +2060,31 @@
                 }, 1000);
             }
 
-            showMessage(message, type) {
+            showMessage(message, type, duration = 3000) {
                 const messageDiv = document.createElement('div');
                 messageDiv.style.cssText = `
                     position: fixed;
-                    top: 20px;
+                    top: 50%;
                     left: 50%;
-                    transform: translateX(-50%);
-                    background: ${type === 'error' ? 'rgba(255,107,107,0.9)' : 'rgba(76,175,80,0.9)'};
+                    transform: translate(-50%, -50%);
+                    background: ${type === 'error' ? 'rgba(255,107,107,0.95)' : 'rgba(76,175,80,0.95)'};
                     color: white;
-                    padding: 8px 16px;
+                    padding: 20px;
                     border-radius: 15px;
                     z-index: 1000;
-                    font-size: 0.8rem;
+                    font-size: 0.9rem;
                     animation: zoomIn 0.3s ease-out;
+                    text-align: center;
+                    max-width: 80%;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                    border: 2px solid ${type === 'error' ? '#ff6b6b' : '#4CAF50'};
                 `;
-                messageDiv.textContent = message;
+                messageDiv.innerHTML = message;
                 document.body.appendChild(messageDiv);
                 
                 setTimeout(() => {
                     messageDiv.remove();
-                }, 1500);
+                }, duration);
             }
         }
 
